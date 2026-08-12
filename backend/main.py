@@ -48,7 +48,10 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://multibase-ten.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
