@@ -12,12 +12,16 @@ pass.
 flowchart TD
     A([User asks a question]) --> B[Frontend]
     B --> C[Backend]
-    C --> D[["Query Router"]]
-    D --> E{{"Claude → Gemini fallback"}}
-    E --> F{Tool selected}
-    F -->|ambiguous| G[Clarifying question]
-    F -->|clear| H[("Postgres · MongoDB · Neo4j")]
-    H --> I[Response]
+    C --> D{{"Claude LLM → Gemini fallback"}}
+    D --> E[["Query Routing Layer"]]
+    E --> F{Ambiguous?}
+    F -->|yes| G[Clarifying question back to user]
+    F -->|no| H1[(Postgres)]
+    F -->|no| H2[(Neo4j)]
+    F -->|no| H3[(MongoDB)]
+    H1 --> I[Response]
+    H2 --> I
+    H3 --> I
     G --> I
     I --> B
     B --> A
@@ -29,8 +33,8 @@ flowchart TD
 |---|---|
 | **Frontend** | React + Vite — renders per response `source`: table/chart, document card, or graph |
 | **Backend** | FastAPI — validates and executes the query the router generated |
-| **Query Router** | One forced-tool-use / structured-output call — picks the database *and* writes the query together |
-| **LLM providers** | Claude Sonnet 5 (primary), Gemini 2.5 Flash (fallback on failure) |
+| **LLM providers** | Claude Sonnet 5 (primary), Gemini 2.5 Flash (fallback on failure) — interprets the question first |
+| **Query Routing Layer** | Takes the LLM's interpretation, picks the database *and* writes the query together; if the question is ambiguous, reverts to the user with a clarifying question instead of guessing |
 | **Postgres** | Students, contests, problems, submissions — relational data |
 | **MongoDB** | Editorials, problem statements, submission code — nested/flexible content |
 | **Neo4j** | Mentorship, follows, rivalries, problem similarity — relationships |
@@ -43,17 +47,14 @@ safe to run on a fresh clone or a machine that already has data.
 ```mermaid
 flowchart TD
     A([make up]) --> B[docker compose up --build]
-
     subgraph DC["Docker Compose — local"]
         direction LR
         PG[(postgres container)]
         BE[backend container]
         FE[frontend container]
     end
-
     B --> DC
     PG -->|healthy| BE --> FE
-
     BE --> S[["seed_if_needed.py"]]
     S --> C1{Postgres empty?}
     S --> C2{Mongo empty?}
@@ -64,7 +65,6 @@ flowchart TD
     C2 -->|no| X2[skip]
     C3 -->|yes| SN[seed_neo4j.py]
     C3 -->|no| X3[skip]
-
     SP & X1 & SM & X2 & SN & X3 --> R([Ready at localhost:5173])
 ```
 
