@@ -15,16 +15,16 @@ flowchart TD
     C --> D{{"Claude LLM → Gemini fallback"}}
     D --> E[["Query Routing Layer"]]
     E --> F{Ambiguous?}
-    F -->|yes| G[Clarifying question back to user]
+    F -->|yes| G[Clarifying question]
+    G --> B
+    B --> A
     F -->|no| H1[(Postgres)]
     F -->|no| H2[(Neo4j)]
     F -->|no| H3[(MongoDB)]
     H1 --> I[Response]
     H2 --> I
     H3 --> I
-    G --> I
     I --> B
-    B --> A
 ```
 
 ## Components
@@ -34,7 +34,7 @@ flowchart TD
 | **Frontend** | React + Vite — renders per response `source`: table/chart, document card, or graph |
 | **Backend** | FastAPI — validates and executes the query the router generated |
 | **LLM providers** | Claude Sonnet 5 (primary), Gemini 2.5 Flash (fallback on failure) — interprets the question first |
-| **Query Routing Layer** | Takes the LLM's interpretation, picks the database *and* writes the query together; if the question is ambiguous, reverts to the user with a clarifying question instead of guessing |
+| **Query Routing Layer** | Takes the LLM's interpretation, picks the database *and* writes the query together; if the question is ambiguous, skips the databases entirely and sends a clarifying question straight back to the user |
 | **Postgres** | Students, contests, problems, submissions — relational data |
 | **MongoDB** | Editorials, problem statements, submission code — nested/flexible content |
 | **Neo4j** | Mentorship, follows, rivalries, problem similarity — relationships |
