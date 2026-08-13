@@ -326,3 +326,18 @@ orphaned container kept holding the shared network open, causing
 Fix: `docker rm -f <container>` then `docker network rm <network>`
 manually when a service is deliberately removed from the compose file,
 don't assume `down` cleans up containers that are no longer defined.
+
+## UptimeRobot pings /health every 10 min to prevent Render sleep
+Render's free tier sleeps the backend after 15 min idle, causing a ~30s
+cold start on the next request. UptimeRobot (free, 10-min interval)
+pings GET /health to keep it awake — comfortably under the 15-min sleep
+threshold with margin to spare.
+Considered a GitHub Actions scheduled workflow instead - rejected, since
+GitHub's own docs note scheduled cron isn't guaranteed to fire on time
+(can be delayed or skipped under load), which defeats the purpose of a
+tight keep-alive interval. UptimeRobot is dedicated monitoring infra,
+not a side effect of a CI system.
+Trade-off: keeping the backend always-on uses close to the full 750
+free instance-hours/month Render grants - fine for one service, but
+would need watching if a second free Render service is ever added on
+the same account.
