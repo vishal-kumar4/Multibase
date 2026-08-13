@@ -39,6 +39,23 @@ flowchart TD
 | **MongoDB** | Editorials, problem statements, submission code — nested/flexible content |
 | **Neo4j** | Mentorship, follows, rivalries, problem similarity — relationships |
 
+## Security layers
+
+Every generated query is validated before it ever reaches a database.
+Validation happens at two levels where possible — app-level (checked in
+code) and DB-level (enforced by the database itself, so even a bug in
+the app-level check can't slip through):
+
+| | App-level | DB-level |
+|---|---|---|
+| **Postgres** | `SELECT`/`WITH` only, write-keyword blocklist | Dedicated read-only Postgres role |
+| **MongoDB** | Only `find`/`aggregate` ever callable — no raw queries reach the DB | Dedicated read-only Atlas user |
+| **Neo4j** | Regex blocks write clauses anywhere in the query text | *Not available* — Aura's free tier has no custom roles |
+
+Neo4j is intentionally single-layer for now — a documented trade-off of
+the free tier, not an oversight. See [`DECISIONS.md`](./DECISIONS.md)
+for the full reasoning.
+
 ## Docker & seeding flow
 
 `make up` builds and starts everything, then seeds only what's empty —
