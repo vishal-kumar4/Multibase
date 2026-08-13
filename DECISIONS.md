@@ -11,7 +11,7 @@ Mongo is added.
 ## LLM provider abstraction (Claude or Gemini, configurable)
 A thin `LLMProvider` interface means swapping models is a config change, not
 a rewrite, and lets us A/B cost/quality later.
-Trade-off: slight upfront complexity vs. hardcoding one provider.
+Trade-off: slight upfront complexity vs. hardcoding one providear.
 
 ## Docker Postgres on a non-default port (5433)
 Local machine already had a Homebrew Postgres bound to 5432. Rather than
@@ -250,6 +250,17 @@ correct data from earlier direct checkpoint tests: "who does Jordan
 Hines mentor" correctly returned Michael Smith and Jeffrey White via
 neo4j; "problems similar to problem 35" correctly returned the same
 shared-tag matches.
+
+## Conversation history persists client-side with a rolling 24h expiry
+Chat history is saved to localStorage, with a rolling 24-hour window
+that resets on each new message rather than a fixed expiry from the
+first message - a conversation stays alive as long as it's actively
+used, only going stale after a full day of no activity.
+Chosen over server-side session storage (Redis, etc.) for the same
+reason as the stateless multi-turn design elsewhere in the app - keeps
+the backend simple, no session store to run or scale.
+Trade-off: history is tied to one browser - lost if localStorage is
+cleared, doesn't sync across devices or browsers. Acceptable for v1.
 
 ## Auto-seed-if-empty on `make up`, explicit force-reseed kept separate
 `make up` now runs seed_if_needed.py automatically - checks if
