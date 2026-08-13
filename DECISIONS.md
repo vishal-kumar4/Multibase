@@ -78,6 +78,17 @@ that toggles a CSS class (rather than swapping between two different
 elements) after an early version's collapse button silently stopped
 responding to clicks.
 
+## Conversation history persists client-side with a rolling 24h expiry
+Chat history is saved to localStorage, with a rolling 24-hour window
+that resets on each new message rather than a fixed expiry from the
+first message - a conversation stays alive as long as it's actively
+used, only going stale after a full day of no activity.
+Chosen over server-side session storage (Redis, etc.) for the same
+reason as the stateless multi-turn design elsewhere in the app - keeps
+the backend simple, no session store to run or scale.
+Trade-off: history is tied to one browser - lost if localStorage is
+cleared, doesn't sync across devices or browsers. Acceptable for v1.
+
 ## Backend and frontend containerized, not just Postgres
 Originally only Postgres ran in Docker; backend and frontend were started
 manually in separate terminals with a venv that had to be activated each
@@ -251,17 +262,6 @@ Hines mentor" correctly returned Michael Smith and Jeffrey White via
 neo4j; "problems similar to problem 35" correctly returned the same
 shared-tag matches.
 
-## Conversation history persists client-side with a rolling 24h expiry
-Chat history is saved to localStorage, with a rolling 24-hour window
-that resets on each new message rather than a fixed expiry from the
-first message - a conversation stays alive as long as it's actively
-used, only going stale after a full day of no activity.
-Chosen over server-side session storage (Redis, etc.) for the same
-reason as the stateless multi-turn design elsewhere in the app - keeps
-the backend simple, no session store to run or scale.
-Trade-off: history is tied to one browser - lost if localStorage is
-cleared, doesn't sync across devices or browsers. Acceptable for v1.
-
 ## Auto-seed-if-empty on `make up`, explicit force-reseed kept separate
 `make up` now runs seed_if_needed.py automatically - checks if
 Postgres/Mongo/Neo4j are empty and seeds only if so, so a fresh fork's
@@ -301,6 +301,32 @@ result, not the static node-link diagram originally planned (see the
 "simple static node-link diagram first, upgrade later" decision).
 Routing and safety are done and verified; the graph visualization itself
 is still open work.
+
+## Rate limiting via slowapi, keyed by client IP
+No auth layer exists, so IP is the only available key. /ask and /query
+get the tightest limits (10/min) since they trigger real LLM API spend
+per call; /health and /schema are cheap, looser limits (30/min, 20/min).
+Storage is in-memory (slowapi's default) - resets on container restart,
+and wouldn't share state correctly across multiple backend instances if
+ever scaled horizontally. Fine for a single-instance deployment; would
+need a Redis-backed store before scaling out.
+
+## Full Swagger/ReDoc API docs via typed Pydantic response models
+FastAPI generates /docs and /redoc automatically from route type hints,
+but only if the routes actually declare response_model, tags, and
+docstrings - without them the generated docs just show "returns:
+object" and are useless. Added request/response models in schemas.py
+(kept separate from main.py so route logic and data contracts don't
+mix), tags per route group, and docstrings pulled into each endpoint's
+description.
+One real regression caught during this: AskRequest.history moved from a
+plain list of dicts to list[Turn] (a proper Pydantic model, needed for
+Swagger to show a real schema instead of an opaque object) - but
+process_question() still did dict-style access (turn["role"]), which
+Pydantic model instances don't support. Fixed by converting back to
+plain dicts (t.model_dump()) before use. Caught by testing the actual
+multi-turn clarification flow, not just that /ask worked on a fresh
+question.
 
 ## Postgres moved to Neon (managed), local Docker container removed
 Completed the pattern started with Mongo/Neo4j - Postgres was the last
