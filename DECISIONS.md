@@ -378,3 +378,24 @@ Trade-off: keeping the backend always-on uses close to the full 750
 free instance-hours/month Render grants - fine for one service, but
 would need watching if a second free Render service is ever added on
 the same account.
+
+## MODEL_PERFORMANCE.md - a reproducible eval, not a hand-written claim
+Built scripts/eval_model.py: a fixed 24-question test set (6 each for
+Postgres/Mongo/Neo4j routing, 6 deliberately ambiguous) that hits /ask,
+paced ~7s apart to stay under the 10/min rate limit, and auto-generates
+MODEL_PERFORMANCE.md from the results - routing accuracy per database,
+ambiguity-detection accuracy, latency stats, full per-question detail.
+Kept both the script and the report in the repo rather than just the
+report - a results table with no way to rerun it is an unverifiable
+claim, not evidence. eval_results.json (raw intermediate data) is
+gitignored, regenerated fresh on every run.
+First run: 18/18 (100%) routing accuracy, 21/24 (88%) ambiguity
+detection - the 3 misses were all "show me the best/most active X"
+phrasings that read as answerable-with-a-reasonable-default rather than
+genuinely ambiguous, distinct from the bare "top/worst/hardest" pattern
+the system prompt explicitly targets.
+Known limitations, stated in the report itself: checks routing
+correctness and ambiguity detection, not whether returned data values
+are factually correct (depends on randomly-seeded data); can't
+distinguish Claude vs. Gemini answering; LLM responses aren't fully
+deterministic so re-runs may shift slightly.
